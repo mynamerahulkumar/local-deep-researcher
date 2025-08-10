@@ -1,124 +1,152 @@
-# Local Deep Researcher: Architecture Diagram
-
-Below is the architecture diagram showing the components and flow of the Local Deep Researcher system. The diagram illustrates how different components interact and how data flows through the research process.
+# Local Deep Researcher: Architecture Diagram (Final Version)
 
 ```
-+-------------------------------------------------------------------------------------------------------------------+
-|                                        LOCAL DEEP RESEARCHER ARCHITECTURE                                          |
-+-------------------------------------------------------------------------------------------------------------------+
++------------------------------------------------------------------+
+|                LOCAL DEEP RESEARCHER ARCHITECTURE                 |
++------------------------------------------------------------------+
 
-                   +-------------------+
-                   |                   |
-                   |   User Interface  |
-                   |   (LangGraph UI)  |
-                   |                   |
-                   +--------+----------+
-                            |
-                            | Research Topic
-                            v
-+--------------------------------------------------------+
-|               LANGGRAPH WORKFLOW ENGINE                 |
-+--------------------------------------------------------+
-                            |
-                            |
-   +------------------------+-------------------------+
-   |                        |                         |
-   v                        v                         v
-+--------+        +-------------------+     +-------------------+
-|        |        |                   |     |                   |
-| Config |        |  StateGraph Flow  |     |  State Management |
-|        |        |                   |     |                   |
-+--------+        +-------+-----------+     +-------------------+
-                          |
-                          |
-                          v
-+--------------------------------------------------------+
-|                       NODES                             |
-+--------------------------------------------------------+
-   |           |           |             |           |
-   |           |           |             |           |
-   v           v           v             v           v
-+--------+ +--------+ +--------+   +--------+  +--------+
-|        | |        | |        |   |        |  |        |
-|Generate| |  Web   | |Summarize|  |Reflect |  |Finalize|
-| Query  | |Research| |Sources  |  |   on   |  |Summary |
-|        | |        | |        |   |Summary |  |        |
-+--------+ +--------+ +--------+   +--------+  +--------+
-               |
-               v
-      +-------------------+
-      |                   |      +-------------------+
-      |  Search Provider  |<---->| Local LLM Provider|
-      |                   |      |                   |
-      +--------+----------+      +--------+----------+
-               |                          |
-               v                          v
-     +-------------------+      +-------------------+
-     |                   |      |                   |
-     |  Search Services  |      |   Ollama/LMStudio |
-     |                   |      |                   |
-     +-------------------+      +-------------------+
-     | - DuckDuckGo      |      | - Various Models  |
-     | - Tavily          |      | - JSON Mode       |
-     | - Perplexity      |      | - Tool Calling    |
-     | - SearXNG         |      |                   |
-     +-------------------+      +-------------------+
+                    +-------------------+
+                    |  User Interface   |
+                    |  (LangGraph UI)   |
+                    +---------+---------+
+                              |
+                              | Research Topic
+                              v
+                    +---------+---------+
+                    |  LangGraph Flow   |
+                    |  (StateGraph)     |
+                    +---------+---------+
+                              |
+                              v
++------------------------------------------------------------------+
+|                       RESEARCH WORKFLOW                           |
++------------------------------------------------------------------+
+          |                   |                      |
+          v                   v                      v
+  +---------------+   +---------------+      +---------------+
+  | Configuration |   | State Manager |      | Routing Logic |
+  +---------------+   +---------------+      +---------------+
 
-+-------------------------------------------------------------------------------------------------------------------+
-|                                             DATA FLOW                                                              |
-+-------------------------------------------------------------------------------------------------------------------+
++------------------------------------------------------------------+
+|                       PROCESSING NODES                            |
++------------------------------------------------------------------+
 
-+---------------+    +---------------+    +---------------+    +---------------+    +---------------+
-| Research      |    | Search        |    | Web           |    | Updated       |    | Final         |
-| Topic         |--->| Query         |--->| Results       |--->| Summary       |--->| Report        |
-|               |    |               |    |               |    |               |    | with Sources  |
-+---------------+    +---------------+    +---------------+    +---------------+    +---------------+
-                           ^                                          |
-                           |                                          |
-                           +------------------------------------------+
-                                   Follow-up Query (Iteration)
+  +----------+    +----------+    +----------+    +----------+    +----------+
+  | Generate |    |   Web    |    |Summarize |    | Reflect  |    |Finalize  |
+  |  Query   |--->| Research |--->| Sources  |--->|    on    |--->| Summary  |
+  |          |    |          |    |          |    | Summary  |    |          |
+  +----------+    +----+-----+    +----------+    +-----+----+    +----------+
+                       |                                |
+                       |                                |
+                       v                                |
+                 +-----+------+                         |
+                 |  External  |                         |
+                 |  Services  |                         |
+                 +-----+------+                         |
+                       |                                |
+        +--------------|----------------+               |
+        |              |                |               |
+        v              v                v               |
+  +-----------+  +-----------+  +------------+         |
+  |  Search   |  |   Local   |  | Optional   |         |
+  | Providers |  |    LLM    |  | Services   |         |
+  +-----------+  +-----------+  +------------+         |
+  |DuckDuckGo |  | Ollama    |  | Tavily API |         |
+  |SearXNG    |  | LMStudio  |  | Perplexity |         |
+  +-----------+  +-----------+  +------------+         |
+                                                       |
+                       +-----------------------------+ |
+                       |         Iteration Loop      | |
+                       |      (Follow-up Queries)    |<+
+                       +-----------------------------+
+
+
++------------------------------------------------------------------+
+|                          DATA FLOW                                |
++------------------------------------------------------------------+
+
+  +-----------+   +-----------+   +-----------+   +-----------+   +-----------+
+  | Research  |   | Search    |   |   Web     |   | Updated   |   |   Final   |
+  |  Topic    |-->|  Query    |-->| Results   |-->| Summary   |-->|  Report   |
+  |           |   |           |   |           |   |           |   |           |
+  +-----------+   +-----------+   +-----------+   +-----------+   +-----------+
+                      ^                                 |
+                      |                                 v
+                      |                          +-----------+
+                      |                          | Knowledge |
+                      +--------------------------+   Gaps    |
+                                                 +-----------+
 ```
 
-## Component Descriptions
+## Architecture Overview
 
-### User Interface
-- **LangGraph UI**: The web interface where users input research topics and view results
-- Visualizes the workflow and allows configuration adjustments
+### 1. User Interface Layer
+- **LangGraph UI**: Web-based interface where users:
+  - Enter research topics
+  - Configure research parameters
+  - Visualize the research workflow
+  - View final research reports
 
-### LangGraph Workflow Engine
-- **StateGraph Flow**: Defines the research process flow and routing logic
-- **State Management**: Tracks research state across iterations using the `SummaryState` class
-- **Config**: Handles configuration through environment variables and UI settings
+### 2. Workflow Management Layer
+- **LangGraph Flow**: Orchestrates the research process using:
+  - **StateGraph**: Defines node connections and routing
+  - **Configuration**: Manages settings from environment or UI
+  - **State Manager**: Tracks progress and data across iterations
+  - **Routing Logic**: Controls iteration flow and termination
 
-### Nodes
-- **Generate Query**: Creates optimized search queries for the research topic
-- **Web Research**: Performs web searches using the configured provider
-- **Summarize Sources**: Synthesizes information from search results
-- **Reflect on Summary**: Identifies knowledge gaps and generates follow-up queries
-- **Finalize Summary**: Creates the final report with citations
+### 3. Processing Nodes Layer
+A sequential pipeline of specialized functions:
 
-### External Services
-- **Search Provider**: Interface to various search engines
-  - DuckDuckGo, Tavily, Perplexity, SearXNG
-- **Local LLM Provider**: Interface to locally-run language models
-  - Ollama or LMStudio with various model options
+- **Generate Query**:
+  - Takes research topic or knowledge gaps
+  - Produces optimized search queries
+  - Uses structured output (JSON mode or tool calling)
+  
+- **Web Research**:
+  - Executes search queries through configured provider
+  - Retrieves relevant web content
+  - Formats and prepares search results
+  
+- **Summarize Sources**:
+  - Creates initial summary or updates existing summary
+  - Integrates new information coherently
+  - Maintains focus on research topic
+  
+- **Reflect on Summary**:
+  - Analyzes current knowledge
+  - Identifies information gaps
+  - Formulates follow-up queries
+  
+- **Finalize Summary**:
+  - Prepares final research report
+  - Formats all sources as citations
+  - Organizes information logically
 
-### Data Flow
-The system follows an iterative process:
+### 4. External Services Layer
+- **Search Providers**:
+  - DuckDuckGo (default, no API key required)
+  - SearXNG (self-hosted option)
+  - Tavily (with API key)
+  - Perplexity (with API key)
+  
+- **Local LLM Providers**:
+  - Ollama: Easy local LLM hosting
+  - LMStudio: Alternative with OpenAI-compatible API
+  
+### 5. Data Flow
 1. User provides a research topic
-2. LLM generates an initial search query
-3. System retrieves web search results
-4. LLM summarizes the findings
-5. LLM reflects on the summary and identifies knowledge gaps
-6. LLM generates a follow-up query
-7. Process repeats for configured number of iterations
-8. Final summary with sources is produced
+2. System generates search query
+3. Web search retrieves information
+4. Information is summarized
+5. Knowledge gaps are identified
+6. Follow-up queries target gaps
+7. Process repeats for configured iterations
+8. Final report is produced with sources
 
-## Key Features
-
-- **Fully Local**: All processing happens on the user's machine
-- **Multiple Search Options**: Supports various search providers
-- **Flexible LLM Integration**: Works with Ollama or LMStudio
-- **Iterative Research**: Automatically refines queries to fill knowledge gaps
-- **Structured Output**: Produces formatted reports with citations
-- **Configurable**: Extensive options to customize behavior
+### 6. Key Technical Features
+- Entirely local operation (no remote APIs required for core functionality)
+- Flexible search provider options
+- Structured LLM outputs (JSON mode or tool calling)
+- Source deduplication and citation
+- Iterative knowledge refinement
+- Configurable research depth
