@@ -1,0 +1,12 @@
+langgraph
+langchain-community
+tavily-python
+langchain-ollama
+duckduckgo-search
+langchain-openai
+openai
+langchain_openai
+httpx
+markdownify
+python-dotenv
+langgraph-cli[inmem]
